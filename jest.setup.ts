@@ -15,6 +15,16 @@ jest.mock('expo-location', () => ({
   })),
   requestForegroundPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
   requestBackgroundPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  getBackgroundPermissionsAsync: jest.fn(async () => ({ status: 'granted' })),
+  startLocationUpdatesAsync: jest.fn(async () => {}),
+  stopLocationUpdatesAsync: jest.fn(async () => {}),
+  hasStartedLocationUpdatesAsync: jest.fn(async () => false),
+  ActivityType: { AutomotiveNavigation: 2 },
+}));
+
+jest.mock('expo-task-manager', () => ({
+  defineTask: jest.fn(),
+  isTaskRegisteredAsync: jest.fn(async () => false),
 }));
 
 jest.mock('expo-haptics', () => ({

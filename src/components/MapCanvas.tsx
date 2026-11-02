@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { HAZARDS } from '../features/hazards/taxonomy';
-import { brand, mapFeature, neutral, radius, space, traffic } from '../theme/tokens';
+import { brand, mapFeature, neutral, radius, routeLine, space, traffic } from '../theme/tokens';
 import type { HazardType } from '../theme/tokens';
 import { type } from '../theme/typography';
 import { HazardIcon } from './HazardIcon';
@@ -37,10 +37,10 @@ type Props = {
  * SCAFFOLD IMPLEMENTATION. This renders the real visual language (traffic-
  * coloured segments, the recommended-route line above them, ring-and-badge
  * hazard pins) using plain views, so the rest of the frontend can be built,
- * reviewed and tested today without a Mapbox account or a native dev build.
+ * reviewed and tested today without a native dev build.
  *
- * The production replacement is `@rnmapbox/maps`, and the layer order below
- * mirrors the one it will use exactly:
+ * The trip screens have moved to `LiveMap` (react-native-maps); home and
+ * quote still render this. The layer order below is the one LiveMap keeps:
  *
  *   6  puck            driver position, bearing-rotated (UI thread)
  *   5  hazard-symbols  clustered SymbolLayer, 10 icon types
@@ -163,8 +163,8 @@ const styles = StyleSheet.create({
     backgroundColor: mapFeature.greenSpace,
   },
   segment: { position: 'absolute', borderRadius: 3 },
-  route: { position: 'absolute', backgroundColor: '#2B6CF6' },
-  routeCasing: { position: 'absolute', backgroundColor: '#12428F' },
+  route: { position: 'absolute', backgroundColor: routeLine.ahead },
+  routeCasing: { position: 'absolute', backgroundColor: routeLine.casing },
   routeH: { left: '18%', top: '46%', width: '46%', height: 5 },
   routeV: { left: '62%', top: '24%', width: 5, height: '24%' },
   pin: { position: 'absolute', marginLeft: -14, marginTop: -14 },

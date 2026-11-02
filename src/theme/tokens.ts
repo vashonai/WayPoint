@@ -61,6 +61,18 @@ export const traffic = {
   unknown: '#9AA0A6',
 } as const;
 
+/**
+ * The recommended route and the trail behind the vehicle.
+ *
+ * Functional, like traffic: the blue line is the route still to drive, drawn
+ * above traffic (§3.1); the grey line is where the vehicle has actually been.
+ */
+export const routeLine = {
+  ahead: '#2B6CF6',
+  casing: '#12428F',
+  taken: '#6B7780',
+} as const;
+
 /** Brand & Style Guide §2.4 — basemap features. */
 export const mapFeature = {
   water: '#B7DEF5',
@@ -136,6 +148,7 @@ export const tokens = {
   brand,
   neutral,
   traffic,
+  routeLine,
   mapFeature,
   hazard,
   radius,

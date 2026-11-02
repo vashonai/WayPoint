@@ -63,7 +63,8 @@
         {
           "locationAlwaysAndWhenInUsePermission": "While you are on an active trip, Waypoint shares your live location with the trusted contact you chose, and keeps route tracking running so your fare stays accurate and your trip stays protected.",
           "isAndroidBackgroundLocationEnabled": true,
-          "isAndroidForegroundServiceEnabled": true
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
         }
       ]
     ],

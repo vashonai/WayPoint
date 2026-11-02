@@ -5,6 +5,7 @@ export { DynamicForm, validate, type FormValues } from './DynamicForm';
 export { FareBreakdown } from './FareBreakdown';
 export { HazardIcon } from './HazardIcon';
 export { HazardPicker } from './HazardPicker';
+export { LiveMap, DEMO_HAZARD_PINS, type CameraMode, type HazardPin } from './LiveMap';
 export { LogoLockup, LogoMark, Wordmark } from './Logo';
 export { MapCanvas, DEMO_HAZARDS, DEMO_SEGMENTS, type MapHazard, type MapSegment } from './MapCanvas';
 export { PanicButton, PANIC_HOLD_MS } from './PanicButton';

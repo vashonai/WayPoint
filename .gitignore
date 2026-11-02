@@ -7,5 +7,6 @@ web-build/
 android/
 ios/
 expo-env.d.ts
+.env
 .env*.local
 coverage/

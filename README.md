@@ -20,13 +20,23 @@ pnpm start          # then press a / i / w
 | Script | What it does |
 | --- | --- |
 | `pnpm start` | Expo dev server |
-| `pnpm test` | Jest + React Native Testing Library (44 tests) |
+| `pnpm test` | Jest + React Native Testing Library (59 tests) |
 | `pnpm typecheck` | `tsc --noEmit`, strict + `noUncheckedIndexedAccess` |
 | `pnpm lint` | ESLint, including the architecture rules below |
 | `pnpm format` | Prettier |
 
-Runs in Expo Go today. A **custom dev client** becomes mandatory the moment the
-real map lands — see *Known gaps* below.
+Runs in Expo Go, with two limits: iOS shows Apple Maps instead of Google, and
+there is no background location. A **development build** lifts both:
+
+```bash
+cp .env.example .env          # add GMAPS_ANDROID_KEY / GMAPS_IOS_KEY
+npx expo run:android          # or run:ios, or an EAS development build
+```
+
+Keys are read by `app.config.js`. Rebuild after changing one. Test background
+tracking on a real Android phone — start a trip, lock the screen for ten
+minutes, check the trace for gaps; Samsung and Xiaomi are the ones that kill
+background apps.
 
 ---
 
@@ -50,6 +60,7 @@ src/
 │  ├─ trip/machine/       the trip phase state chart
 │  ├─ hazards/            the ten-condition taxonomy
 │  ├─ fare/               fare PRESENTATION (never calculation)
+│  ├─ tracking/           live position: filter, snap, split route, trace outbox
 │  └─ safety/             three-path panic escalation
 ├─ store/                 Zustand — ephemeral state only
 └─ mocks/                 Kingston fixtures standing in for the server
@@ -126,13 +137,13 @@ Nothing is lost by adding it later: components consume semantic tokens, not
 literals, so NativeWind can be layered on for static chrome without touching
 component logic. The boundary to keep when you do — animated paths and map
 layer styles stay on plain style objects, because worklets cannot resolve
-classes and Mapbox layers do not take React Native styles at all.
+classes and native map overlays do not take React Native styles at all.
 
 ---
 
 ## Tests
 
-44 tests, all pure logic and fast. What they protect:
+59 tests, all pure logic and fast. What they protect:
 
 - **Trip machine** — every transition including cancel-during-match, driver
   drops mid-trip, and the server disagreeing with local optimism.
@@ -142,6 +153,8 @@ classes and Mapbox layers do not take React Native styles at all.
 - **Country config** — two markets, so a hardcoded `JM` string fails now.
 - **Dynamic form** — validation derived from the spec, errors say how to fix.
 - **Safety store** — sharing defaults off, expires at trip end, revokes instantly.
+- **Tracking** — bad fixes dropped (accuracy, order, impossible speed), snapping
+  within 40 m, route split into taken / remaining, no trace lost in a dead zone.
 
 The map is deliberately not tested. You do not unit-test a map; the two-sided
 ride flow needs Maestro across two simulators.
@@ -152,12 +165,11 @@ ride flow needs Maestro across two simulators.
 
 Deliberate, in rough priority order.
 
-1. **The map is a scaffold.** `MapCanvas` renders the real visual language —
-   traffic-coloured segments, route above them, ring-and-badge pins — with
-   plain views, so the app runs today without a Mapbox account. Production is
-   `@rnmapbox/maps` with a data-driven `LineLayer` and a clustered
-   `SymbolLayer`; the layer order is documented in the component. That swap
-   requires a custom dev client.
+1. **Only the trip screens have a real map.** `LiveMap` (react-native-maps,
+   Google provider, Google traffic layer) is on both trip screens. Home and
+   quote still use the plain-view `MapCanvas` scaffold. Hazards are fixtures —
+   not yet fetched by viewport (`/hazards?bbox=…`) or pushed over the trip
+   channel — and unclustered; add react-native-map-clustering if pins get dense.
 2. **No backend.** Fixtures stand in for Supabase and tRPC. `firePanic` and the
    report submission have their real three-path / paused-mutation structure with
    placeholder transports.
@@ -166,17 +178,24 @@ Deliberate, in rough priority order.
    like nothing happened is this feature's worst failure.
 4. **No offline outbox.** TanStack Query is configured but `onlineManager` is
    not yet wired to NetInfo and the cache is not persisted.
-5. **Location is not streaming.** The 1 Hz shared-value pattern is specified in
-   the architecture doc but not implemented; `expo-location` is installed and
-   permission strings are in `app.json`.
+5. **Live tracking runs on simulated fixes.** `features/tracking` and
+   `LiveMap` implement the client pipeline: filter, snap to route, split into
+   taken / remaining, gliding car, follow / overview camera. The driver's trace
+   is recorded by a background task (`index.js` defines it; dev build only)
+   and uploaded in batches. The trip maps are fed by `simulateFixes` because
+   there is no trip room yet; set `source: 'device'` to use the phone's GPS.
+   The trace queue and the active trip id are in-memory, so a trip that
+   outlives an app kill loses its trace until both are MMKV-backed. Uploads
+   and the live broadcast are placeholders. The official map-matched trace,
+   which replaces the live line at trip end, is server work.
 
 ---
 
 ## Next
 
-- Custom dev client + Mapbox, replacing `MapCanvas`
+- Google Maps keys + an EAS development build; `LiveMap` on home and quote
 - Supabase auth and the tRPC decision API
-- MMKV persistence for panic, draft reports, and the query cache
+- MMKV persistence for panic, draft reports, the trip trace, and the query cache
 - Offline outbox: NetInfo → `onlineManager`, `resumePausedMutations`
 - Maestro E2E for the two-sided ride flow
 

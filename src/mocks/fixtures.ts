@@ -1,4 +1,5 @@
 import type { FinalFare, Quote } from '../features/fare/presentFare';
+import type { LngLat } from '../features/tracking';
 
 /**
  * Kingston fixtures for the frontend scaffold.
@@ -54,3 +55,24 @@ export const DEMO_TRIP_HISTORY = [
   { id: 't2', from: 'Liguanea', to: 'Cross Roads', date: '4 Sep', fare: 940, disputed: false },
   { id: 't3', from: 'Papine', to: 'Downtown', date: '1 Sep', fare: 1620, disputed: true },
 ];
+
+/**
+ * Planned route, Half Way Tree → New Kingston, as the routing service would
+ * return it: [lng, lat] vertices. Illustrative — traced by hand, not surveyed.
+ */
+export const DEMO_ROUTE: LngLat[] = [
+  [-76.7967, 18.0124],
+  [-76.7951, 18.0115],
+  [-76.7934, 18.0105],
+  [-76.7915, 18.0094],
+  [-76.7897, 18.0083],
+  [-76.7878, 18.0073],
+  [-76.7866, 18.0068],
+  [-76.7861, 18.0081],
+  [-76.7857, 18.0097],
+  [-76.7853, 18.0113],
+  [-76.7849, 18.0126],
+];
+
+export const DEMO_PICKUP: LngLat = [-76.7967, 18.0124];
+export const DEMO_DESTINATION: LngLat = [-76.7849, 18.0126];

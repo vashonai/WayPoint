@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
@@ -11,6 +11,7 @@ import {
   TripSheet,
 } from '../../src/components';
 import { formatCurrency, useCountry } from '../../src/features/country/CountryProvider';
+import { requestTripLocationAccess } from '../../src/features/tracking';
 import { DEMO_TRIP_ID } from '../../src/mocks/fixtures';
 import { brand, neutral, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
@@ -23,6 +24,28 @@ import { type } from '../../src/theme/typography';
 export default function DriverHome() {
   const country = useCountry();
   const [online, setOnline] = useState(false);
+
+  const toggleOnline = async (next: boolean) => {
+    if (!next) {
+      setOnline(false);
+      return;
+    }
+    const access = await requestTripLocationAccess(explainBackgroundLocation);
+    if (access === 'denied') {
+      Alert.alert(
+        'Location is off',
+        'Waypoint needs your location to match you with nearby passengers. You can turn it on in Settings.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) },
+        ],
+      );
+      return;
+    }
+    // "While Using" alone is enough to go online; the trace then records only
+    // while the app is on screen.
+    setOnline(true);
+  };
 
   return (
     <View style={styles.root}>
@@ -42,7 +65,7 @@ export default function DriverHome() {
             <Text style={type.bodyMedium}>{online ? 'Online' : 'Go online'}</Text>
             <Switch
               value={online}
-              onValueChange={setOnline}
+              onValueChange={toggleOnline}
               trackColor={{ false: neutral.line, true: brand.green }}
               accessibilityLabel="Go online to accept trips"
             />
@@ -74,6 +97,24 @@ export default function DriverHome() {
         </TripSheet>
       </View>
     </View>
+  );
+}
+
+/**
+ * Shown between the "While Using" and "Always" prompts. On Android 11+ the
+ * next step is a Settings page rather than a dialog, so say why first.
+ */
+function explainBackgroundLocation(): Promise<boolean> {
+  return new Promise((resolve) =>
+    Alert.alert(
+      'Keep your trips protected',
+      'Choose “Allow all the time” so your route keeps recording if you switch apps during a trip. Waypoint only tracks location while a trip is in progress.',
+      [
+        { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
+        { text: 'Continue', onPress: () => resolve(true) },
+      ],
+      { cancelable: true, onDismiss: () => resolve(false) },
+    ),
   );
 }
 

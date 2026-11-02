@@ -1,21 +1,26 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import {
-  DEMO_HAZARDS,
-  DEMO_SEGMENTS,
-  MapCanvas,
+  DEMO_HAZARD_PINS,
+  LiveMap,
   PanicButton,
   TripSheet,
   VerifiedBadge,
 } from '../../../../src/components';
 import { useCountry } from '../../../../src/features/country/CountryProvider';
 import { firePanic } from '../../../../src/features/safety/firePanic';
-import { PHASE_COPY, showsSafetyControls } from '../../../../src/features/trip';
-import { DEMO_DRIVER } from '../../../../src/mocks/fixtures';
+import { PHASE_COPY, showsLiveMap, showsSafetyControls } from '../../../../src/features/trip';
+import {
+  DEMO_DESTINATION,
+  DEMO_DRIVER,
+  DEMO_PICKUP,
+  DEMO_ROUTE,
+} from '../../../../src/mocks/fixtures';
 import { useSafetyStore } from '../../../../src/store/safety.store';
+import { useLiveTracking } from '../../../../src/store/tracking.store';
 import { useTripStore } from '../../../../src/store/trip.store';
 import { brand, neutral, radius, space } from '../../../../src/theme/tokens';
 import { type } from '../../../../src/theme/typography';
@@ -32,6 +37,12 @@ export default function LiveTrip() {
   const phase = useTripStore((s) => s.phase);
   const send = useTripStore((s) => s.send);
   const isSharing = useSafetyStore((s) => s.isSharing);
+  const [sheetHeight, setSheetHeight] = useState(0);
+
+  // Stands in for joining the trip room and receiving `driver_location`
+  // broadcasts. Live only while the trip is — the stream stops, and the
+  // position is cleared, the moment the phase leaves the live set.
+  useLiveTracking({ route: DEMO_ROUTE, source: 'simulated', enabled: showsLiveMap(phase) });
 
   // Stands in for the trip channel's phase broadcasts.
   useEffect(() => {
@@ -47,9 +58,20 @@ export default function LiveTrip() {
 
   return (
     <View style={styles.root}>
-      <MapCanvas hazards={DEMO_HAZARDS} segments={DEMO_SEGMENTS} />
+      <LiveMap
+        route={DEMO_ROUTE}
+        pickup={DEMO_PICKUP}
+        destination={DEMO_DESTINATION}
+        defaultCamera="overview"
+        bottomInset={sheetHeight}
+        hazards={DEMO_HAZARD_PINS}
+        showsUserLocation
+      />
 
-      <View style={styles.sheetWrap}>
+      <View
+        style={styles.sheetWrap}
+        onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+      >
         <TripSheet eyebrow={`Trip ${id}`} title={copy.title} detail={copy.detail}>
           <View style={styles.driverRow}>
             <View style={styles.avatar}>
