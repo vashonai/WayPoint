@@ -1,4 +1,6 @@
 import type { FinalFare, Quote } from '../features/fare/presentFare';
+import type { HazardPin } from '../components/MapSurface';
+import type { Place } from '../features/maps';
 import type { LngLat } from '../features/tracking';
 
 /**
@@ -57,8 +59,9 @@ export const DEMO_TRIP_HISTORY = [
 ];
 
 /**
- * Planned route, Half Way Tree → New Kingston, as the routing service would
- * return it: [lng, lat] vertices. Illustrative — traced by hand, not surveyed.
+ * Planned route, Half Way Tree → New Kingston: [lng, lat] vertices.
+ * Illustrative — traced by hand. Only drawn when Google's route is unavailable
+ * (no key, offline); otherwise the Routes API supplies the real road geometry.
  */
 export const DEMO_ROUTE: LngLat[] = [
   [-76.7967, 18.0124],
@@ -76,3 +79,26 @@ export const DEMO_ROUTE: LngLat[] = [
 
 export const DEMO_PICKUP: LngLat = [-76.7967, 18.0124];
 export const DEMO_DESTINATION: LngLat = [-76.7849, 18.0126];
+
+/** The demo trip's ends, as the trip record will carry them. */
+export const DEMO_PICKUP_PLACE: Place = {
+  id: null,
+  name: 'Half Way Tree',
+  address: 'Half Way Tree, Kingston',
+  coord: DEMO_PICKUP,
+};
+export const DEMO_DESTINATION_PLACE: Place = {
+  id: null,
+  name: 'New Kingston',
+  address: 'Knutsford Blvd, Kingston',
+  coord: DEMO_DESTINATION,
+};
+
+/** Hazards along the demo route, standing in for `/hazards?bbox=…`. */
+export const DEMO_HAZARD_PINS: HazardPin[] = [
+  { id: 'hp1', type: 'pothole', coord: [-76.7942, 18.0113] },
+  { id: 'hp2', type: 'construction', coord: [-76.7905, 18.0092] },
+  { id: 'hp3', type: 'flooding', coord: [-76.7879, 18.0061] },
+  { id: 'hp4', type: 'accident', coord: [-76.7858, 18.009] },
+  { id: 'hp5', type: 'enforcement', coord: [-76.7851, 18.0119] },
+];

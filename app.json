@@ -7,13 +7,7 @@
     "icon": "./assets/icon.png",
     "scheme": "waypoint",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "backgroundColor": "#EDF1EE",
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#10233D"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.waypoint.app",
@@ -50,6 +44,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-status-bar",
       [
         "expo-splash-screen",
         {

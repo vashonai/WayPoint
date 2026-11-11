@@ -53,4 +53,13 @@ export type CountryConfig = {
   hazardLabels: Record<string, string>;
   payments: PaymentMethod[];
   locale: string;
+  /**
+   * Where the map opens before a GPS fix, and what place search is biased
+   * towards. Search is also restricted to `code` — a Kingston passenger typing
+   * "Half Way Tree" should never see a result in another country.
+   */
+  map: {
+    center: [lng: number, lat: number];
+    searchRadiusMeters: number;
+  };
 };

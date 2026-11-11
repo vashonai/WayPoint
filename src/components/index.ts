@@ -5,10 +5,19 @@ export { DynamicForm, validate, type FormValues } from './DynamicForm';
 export { FareBreakdown } from './FareBreakdown';
 export { HazardIcon } from './HazardIcon';
 export { HazardPicker } from './HazardPicker';
-export { LiveMap, DEMO_HAZARD_PINS, type CameraMode, type HazardPin } from './LiveMap';
+export { AreaMap } from './AreaMap';
+export { LiveMap, type CameraMode } from './LiveMap';
 export { LogoLockup, LogoMark, Wordmark } from './Logo';
-export { MapCanvas, DEMO_HAZARDS, DEMO_SEGMENTS, type MapHazard, type MapSegment } from './MapCanvas';
+export {
+  HazardMarkers,
+  MapSurface,
+  PlaceMarker,
+  RouteLine,
+  toLatLng,
+  type HazardPin,
+} from './MapSurface';
 export { PanicButton, PANIC_HOLD_MS } from './PanicButton';
+export { RoutePreviewMap } from './RoutePreviewMap';
 export { Screen } from './Screen';
 export { TripSheet } from './TripSheet';
 export { VerifiedBadge } from './VerifiedBadge';

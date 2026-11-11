@@ -3,15 +3,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import {
-  Button,
-  Card,
-  DEMO_HAZARD_PINS,
-  LiveMap,
-  PanicButton,
-  TripSheet,
-} from '../../../src/components';
+import { Button, Card, LiveMap, PanicButton, TripSheet } from '../../../src/components';
 import { useCountry } from '../../../src/features/country/CountryProvider';
+import { useTripRoute } from '../../../src/features/maps';
 import { firePanic } from '../../../src/features/safety/firePanic';
 import {
   beginTripTrace,
@@ -21,7 +15,12 @@ import {
   startBackgroundTracking,
   stopBackgroundTracking,
 } from '../../../src/features/tracking';
-import { DEMO_DESTINATION, DEMO_PICKUP, DEMO_ROUTE } from '../../../src/mocks/fixtures';
+import {
+  DEMO_DESTINATION,
+  DEMO_HAZARD_PINS,
+  DEMO_PICKUP,
+  DEMO_ROUTE,
+} from '../../../src/mocks/fixtures';
 import { useLiveTracking } from '../../../src/store/tracking.store';
 import { brand, neutral, radius, space } from '../../../src/theme/tokens';
 import { type } from '../../../src/theme/typography';
@@ -51,6 +50,9 @@ export default function DriverTrip() {
   const [sheetHeight, setSheetHeight] = useState(0);
 
   const [backgroundOn, setBackgroundOn] = useState(false);
+  // Production: the trip record's route snapshot. The demo trip's fixture
+  // route stands in when Google can't be reached.
+  const { route } = useTripRoute(DEMO_PICKUP, DEMO_DESTINATION, DEMO_ROUTE);
 
   // Evidence path. The background task records the trace for the whole trip,
   // whether or not this screen is visible, and uploads it in batches.
@@ -69,11 +71,12 @@ export default function DriverTrip() {
   }, [id]);
 
   // Live path: this map, and the broadcast that moves the passenger's car.
-  // 'simulated' until routes come from the server — the phone's real GPS would
-  // sit nowhere near the fixture route. Switch to 'device' to drive it for real.
+  // 'simulated' until trips come from the server — the phone's real GPS would
+  // sit nowhere near the demo trip. Switch to 'device' to drive it for real.
   useLiveTracking({
-    route: DEMO_ROUTE,
+    route: route ?? DEMO_ROUTE,
     source: 'simulated',
+    enabled: route !== null,
     onAccepted: (fix) => {
       publishLiveFix(id ?? '', fix);
       // No background task (Expo Go, or "Always" declined): record the trace
@@ -85,7 +88,7 @@ export default function DriverTrip() {
   return (
     <View style={styles.root}>
       <LiveMap
-        route={DEMO_ROUTE}
+        route={route}
         pickup={DEMO_PICKUP}
         destination={DEMO_DESTINATION}
         defaultCamera="follow"

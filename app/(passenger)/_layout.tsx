@@ -6,6 +6,8 @@ import { fontFamily } from '../../src/theme/typography';
 
 export default function PassengerLayout() {
   return (
+    // Tab icon colours are the tint tokens below — always strings — but React
+    // Navigation types them as any ColorValue, which Ionicons does not accept.
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -19,31 +21,32 @@ export default function PassengerLayout() {
         name="index"
         options={{
           title: 'Ride',
-          tabBarIcon: ({ color, size }) => <Ionicons name="navigate" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="navigate" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="activity"
         options={{
           title: 'Activity',
-          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="receipt-outline" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="safety"
         options={{
           title: 'Safety',
-          tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="shield-checkmark-outline" size={size} color={color as string} />,
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
           title: 'Account',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color as string} />,
         }}
       />
       {/* Detail routes live in the group but not in the tab bar. */}
+      <Tabs.Screen name="search" options={{ href: null, tabBarStyle: { display: 'none' } }} />
       <Tabs.Screen name="quote" options={{ href: null }} />
       <Tabs.Screen name="trip/[id]" options={{ href: null }} />
       <Tabs.Screen name="trip/[id]/receipt" options={{ href: null }} />

@@ -1,24 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import {
-  DEMO_HAZARD_PINS,
-  LiveMap,
-  PanicButton,
-  TripSheet,
-  VerifiedBadge,
-} from '../../../../src/components';
+import { LiveMap, PanicButton, TripSheet, VerifiedBadge } from '../../../../src/components';
 import { useCountry } from '../../../../src/features/country/CountryProvider';
+import { useTripRoute } from '../../../../src/features/maps';
 import { firePanic } from '../../../../src/features/safety/firePanic';
 import { PHASE_COPY, showsLiveMap, showsSafetyControls } from '../../../../src/features/trip';
 import {
-  DEMO_DESTINATION,
+  DEMO_DESTINATION_PLACE,
   DEMO_DRIVER,
-  DEMO_PICKUP,
+  DEMO_HAZARD_PINS,
+  DEMO_PICKUP_PLACE,
   DEMO_ROUTE,
 } from '../../../../src/mocks/fixtures';
+import { useBookingStore } from '../../../../src/store/booking.store';
 import { useSafetyStore } from '../../../../src/store/safety.store';
 import { useLiveTracking } from '../../../../src/store/tracking.store';
 import { useTripStore } from '../../../../src/store/trip.store';
@@ -39,10 +36,25 @@ export default function LiveTrip() {
   const isSharing = useSafetyStore((s) => s.isSharing);
   const [sheetHeight, setSheetHeight] = useState(0);
 
+  // Production: the trip record's pickup, destination and route snapshot.
+  const pickup = useBookingStore((s) => s.pickup) ?? DEMO_PICKUP_PLACE;
+  const destination = useBookingStore((s) => s.destination) ?? DEMO_DESTINATION_PLACE;
+  // Without Google (no key, offline): the hand-traced demo route for the demo
+  // trip, otherwise a straight line between the two ends.
+  const fallback = useMemo(
+    () => (pickup === DEMO_PICKUP_PLACE ? DEMO_ROUTE : [pickup.coord, destination.coord]),
+    [pickup, destination],
+  );
+  const { route } = useTripRoute(pickup.coord, destination.coord, fallback);
+
   // Stands in for joining the trip room and receiving `driver_location`
   // broadcasts. Live only while the trip is — the stream stops, and the
   // position is cleared, the moment the phase leaves the live set.
-  useLiveTracking({ route: DEMO_ROUTE, source: 'simulated', enabled: showsLiveMap(phase) });
+  useLiveTracking({
+    route: route ?? fallback,
+    source: 'simulated',
+    enabled: showsLiveMap(phase) && route !== null,
+  });
 
   // Stands in for the trip channel's phase broadcasts.
   useEffect(() => {
@@ -59,9 +71,9 @@ export default function LiveTrip() {
   return (
     <View style={styles.root}>
       <LiveMap
-        route={DEMO_ROUTE}
-        pickup={DEMO_PICKUP}
-        destination={DEMO_DESTINATION}
+        route={route}
+        pickup={pickup.coord}
+        destination={destination.coord}
         defaultCamera="overview"
         bottomInset={sheetHeight}
         hazards={DEMO_HAZARD_PINS}

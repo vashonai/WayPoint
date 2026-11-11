@@ -3,16 +3,10 @@ import { router } from 'expo-router';
 import { Alert, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import {
-  Card,
-  DEMO_HAZARDS,
-  DEMO_SEGMENTS,
-  MapCanvas,
-  TripSheet,
-} from '../../src/components';
+import { AreaMap, Card, TripSheet } from '../../src/components';
 import { formatCurrency, useCountry } from '../../src/features/country/CountryProvider';
 import { requestTripLocationAccess } from '../../src/features/tracking';
-import { DEMO_TRIP_ID } from '../../src/mocks/fixtures';
+import { DEMO_HAZARD_PINS, DEMO_TRIP_ID } from '../../src/mocks/fixtures';
 import { brand, neutral, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
 
@@ -24,6 +18,7 @@ import { type } from '../../src/theme/typography';
 export default function DriverHome() {
   const country = useCountry();
   const [online, setOnline] = useState(false);
+  const [sheetHeight, setSheetHeight] = useState(0);
 
   const toggleOnline = async (next: boolean) => {
     if (!next) {
@@ -49,9 +44,13 @@ export default function DriverHome() {
 
   return (
     <View style={styles.root}>
-      <MapCanvas hazards={DEMO_HAZARDS} segments={DEMO_SEGMENTS} showRoute={false} />
+      {/* Going online is what grants location, so it's also what shows it. */}
+      <AreaMap hazards={DEMO_HAZARD_PINS} bottomInset={sheetHeight} showsUserLocation={online} />
 
-      <View style={styles.sheetWrap}>
+      <View
+        style={styles.sheetWrap}
+        onLayout={(e) => setSheetHeight(e.nativeEvent.layout.height)}
+      >
         <TripSheet
           eyebrow={online ? 'Online · Kingston' : 'Offline'}
           title={online ? 'Waiting for requests' : 'You’re offline'}

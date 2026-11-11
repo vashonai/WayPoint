@@ -1,32 +1,32 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
-import Constants, { ExecutionEnvironment } from 'expo-constants';
-import MapView, {
-  Marker,
-  Polyline,
-  PROVIDER_GOOGLE,
-  type LatLng,
-  type MapMarker,
-  type MapStyleElement,
-  type Region,
-} from 'react-native-maps';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type MapView from 'react-native-maps';
+import { Marker, Polyline, type MapMarker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import type { LngLat } from '../features/tracking';
 import { useTrackingStore } from '../store/tracking.store';
-import type { HazardType } from '../theme/tokens';
-import { brand, elevation, mapFeature, neutral, radius, routeLine, space } from '../theme/tokens';
+import { brand, elevation, neutral, radius, routeLine, space } from '../theme/tokens';
 import { type } from '../theme/typography';
-import { HazardIcon } from './HazardIcon';
+import {
+  HazardMarkers,
+  MapSurface,
+  PlaceMarker,
+  regionFor,
+  ROUTE_LINE_WIDTH,
+  RouteLine,
+  toLatLng,
+  useSettledSnapshot,
+  type HazardPin,
+} from './MapSurface';
 
 export type CameraMode = 'follow' | 'overview' | 'free';
 
-export type HazardPin = { id: string; type: HazardType; coord: LngLat };
-
 type Props = {
-  route: LngLat[];
+  /** The planned route. Null while it is still being fetched. */
+  route: LngLat[] | null;
   pickup?: LngLat;
   destination?: LngLat;
   /** Driver: follow (heading-up, zoomed in). Passenger: overview (fit the whole trip). */
@@ -47,25 +47,8 @@ const MAX_GLIDE_MS = 2000;
 const DEFAULT_GLIDE_MS = 1000;
 /** Overview re-fits this often rather than on every fix, so the zoom doesn't twitch. */
 const OVERVIEW_REFIT_MS = 5000;
-const LINE_WIDTH = 6;
 const PUCK_SIZE = 32;
-
-/**
- * Google Maps on Android always. On iOS only in a development build that has
- * the Google SDK — i.e. a key was configured (see app.config.js). Expo Go on
- * iOS, or no key, falls back to Apple Maps; everything else here works on both.
- */
-const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
-const iosHasGoogle = Constants.expoConfig?.extra?.iosGoogleMaps === true;
-const PROVIDER =
-  Platform.OS === 'android' || (iosHasGoogle && !isExpoGo) ? PROVIDER_GOOGLE : undefined;
-
-/** Basemap colours from Brand & Style Guide §2.4. Google provider only. */
-const MAP_STYLE: MapStyleElement[] = [
-  { featureType: 'water', elementType: 'geometry', stylers: [{ color: mapFeature.water }] },
-  { featureType: 'poi.park', elementType: 'geometry', stylers: [{ color: mapFeature.greenSpace }] },
-  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
-];
+const NO_ROUTE: LngLat[] = [];
 
 /**
  * The live trip map: route ahead, route taken, a gliding vehicle, hazards, and
@@ -75,10 +58,6 @@ const MAP_STYLE: MapStyleElement[] = [
  * driven from store subscriptions through native commands
  * (`animateMarkerToCoordinate`, `animateCamera`); the only thing that
  * re-renders on a fix is <RouteLines>, and the trip sheet never does.
- *
- * The store keeps GeoJSON [lng, lat]; react-native-maps wants
- * { latitude, longitude }. Conversion happens here and nowhere else — a swap
- * puts the car in the Southern Ocean.
  */
 export function LiveMap({
   route,
@@ -94,9 +73,10 @@ export function LiveMap({
   const [mode, setMode] = useState<CameraMode>(defaultCamera);
   const modeRef = useRef<CameraMode>(defaultCamera);
   const lastRefitAt = useRef(0);
+  const plan = route ?? NO_ROUTE;
 
   const [initialRegion] = useState(() =>
-    regionFor([...route, ...(pickup ? [pickup] : []), ...(destination ? [destination] : [])]),
+    regionFor([...plan, ...(pickup ? [pickup] : []), ...(destination ? [destination] : [])]),
   );
 
   const edgePadding = useMemo(
@@ -122,19 +102,25 @@ export function LiveMap({
           },
           { duration },
         );
-      } else if (modeRef.current === 'overview') {
-        const ahead = remaining.length > 0 ? remaining : route;
+      } else if (modeRef.current === 'overview' || !position) {
+        const ahead = remaining.length > 0 ? remaining : plan;
         const coords = [
-          ...(position ? [position] : []),
+          ...(position ? [position] : pickup ? [pickup] : []),
           ...ahead,
           ...(destination ? [destination] : []),
         ];
+        if (coords.length === 0) return;
         map.fitToCoordinates(coords.map(toLatLng), { edgePadding, animated: duration > 0 });
         lastRefitAt.current = Date.now();
       }
     },
-    [route, destination, edgePadding],
+    [plan, pickup, destination, edgePadding],
   );
+
+  // A new plan (Google's route replacing the placeholder view): frame it.
+  useEffect(() => {
+    if (modeRef.current !== 'free') moveCamera(600);
+  }, [moveCamera]);
 
   useEffect(
     () =>
@@ -164,30 +150,21 @@ export function LiveMap({
 
   return (
     <View style={styles.root}>
-      <MapView
+      <MapSurface
         ref={mapRef}
-        provider={PROVIDER}
-        style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
-        customMapStyle={MAP_STYLE}
         mapPadding={{ top: 0, right: 0, bottom: bottomInset, left: 0 }}
         showsUserLocation={showsUserLocation}
-        showsMyLocationButton={false}
-        showsTraffic
-        showsCompass={false}
-        toolbarEnabled={false}
         onMapReady={() => moveCamera(0)}
         // The user moved the map: stop following until they re-centre.
         onPanDrag={() => changeMode('free')}
       >
-        <RouteLines route={route} />
-        {pickup ? <PlaceMarker coord={pickup} fill={neutral.surface} label="Pickup" /> : null}
-        {destination ? (
-          <PlaceMarker coord={destination} fill={brand.gold} label="Destination" />
-        ) : null}
+        <RouteLines route={plan} />
+        {pickup ? <PlaceMarker coord={pickup} kind="pickup" /> : null}
+        {destination ? <PlaceMarker coord={destination} kind="destination" /> : null}
         <HazardMarkers hazards={hazards} />
         <CarMarker />
-      </MapView>
+      </MapSurface>
 
       {mode === 'free' ? (
         <Pressable
@@ -208,11 +185,6 @@ export function LiveMap({
 const RouteLines = memo(function RouteLines({ route }: { route: LngLat[] }) {
   const trail = useTrackingStore((s) => s.trail);
   const remaining = useTrackingStore((s) => s.remaining);
-  // Before the first fix (or before the trip goes live) show the whole plan.
-  const ahead = useMemo(
-    () => (remaining.length > 0 ? remaining : route).map(toLatLng),
-    [remaining, route],
-  );
   const taken = useMemo(() => trail.map(toLatLng), [trail]);
 
   return (
@@ -221,28 +193,14 @@ const RouteLines = memo(function RouteLines({ route }: { route: LngLat[] }) {
         <Polyline
           coordinates={taken}
           strokeColor={routeLine.taken}
-          strokeWidth={LINE_WIDTH}
+          strokeWidth={ROUTE_LINE_WIDTH}
           lineCap="round"
           lineJoin="round"
           zIndex={1}
         />
       ) : null}
-      <Polyline
-        coordinates={ahead}
-        strokeColor={routeLine.casing}
-        strokeWidth={LINE_WIDTH + 3}
-        lineCap="round"
-        lineJoin="round"
-        zIndex={2}
-      />
-      <Polyline
-        coordinates={ahead}
-        strokeColor={routeLine.ahead}
-        strokeWidth={LINE_WIDTH}
-        lineCap="round"
-        lineJoin="round"
-        zIndex={3}
-      />
+      {/* Before the first fix (or before the trip goes live) show the whole plan. */}
+      <RouteLine coords={remaining.length > 0 ? remaining : route} />
     </>
   );
 });
@@ -303,100 +261,14 @@ function MovingCar() {
   );
 }
 
-const HazardMarkers = memo(function HazardMarkers({ hazards }: { hazards: HazardPin[] }) {
-  const tracksViewChanges = useSettledSnapshot();
-  return (
-    <>
-      {hazards.map((h) => (
-        <Marker
-          key={h.id}
-          coordinate={toLatLng(h.coord)}
-          anchor={{ x: 0.5, y: 0.5 }}
-          tracksViewChanges={tracksViewChanges}
-          zIndex={5}
-        >
-          <HazardIcon type={h.type} size={28} />
-        </Marker>
-      ))}
-    </>
-  );
-});
-
-function PlaceMarker({ coord, fill, label }: { coord: LngLat; fill: string; label: string }) {
-  const tracksViewChanges = useSettledSnapshot();
-  return (
-    <Marker
-      coordinate={toLatLng(coord)}
-      anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={tracksViewChanges}
-      zIndex={4}
-      accessibilityLabel={label}
-    >
-      <View style={[styles.place, { backgroundColor: fill }]} />
-    </Marker>
-  );
-}
-
-/**
- * `tracksViewChanges` for a custom-view marker whose look never changes.
- *
- * Left on, Android re-snapshots every marker every frame and the map stutters
- * once there are many hazard pins. Turned off from the start, an SVG child can
- * be snapshotted before it has drawn and the pin comes out blank. So: on for
- * the first moment, then off for good.
- */
-function useSettledSnapshot(): boolean {
-  const [tracking, setTracking] = useState(true);
-  useEffect(() => {
-    const t = setTimeout(() => setTracking(false), 500);
-    return () => clearTimeout(t);
-  }, []);
-  return tracking;
-}
-
-const toLatLng = ([lng, lat]: LngLat): LatLng => ({ latitude: lat, longitude: lng });
-
 /** The real gap between fixes, clamped — the glide should end as the next fix lands. */
 function glideFor(at: number | null, prevAt: number | null): number {
   const gap = at && prevAt ? at - prevAt : DEFAULT_GLIDE_MS;
   return Math.min(MAX_GLIDE_MS, Math.max(MIN_GLIDE_MS, gap));
 }
 
-/** A region that fits `coords` with some margin. Kingston if there is nothing to fit. */
-function regionFor(coords: LngLat[]): Region {
-  if (coords.length === 0) {
-    return { latitude: 18.0179, longitude: -76.8099, latitudeDelta: 0.05, longitudeDelta: 0.05 };
-  }
-  const lngs = coords.map((c) => c[0]);
-  const lats = coords.map((c) => c[1]);
-  const [minLng, maxLng] = [Math.min(...lngs), Math.max(...lngs)];
-  const [minLat, maxLat] = [Math.min(...lats), Math.max(...lats)];
-  return {
-    latitude: (minLat + maxLat) / 2,
-    longitude: (minLng + maxLng) / 2,
-    latitudeDelta: Math.max((maxLat - minLat) * 1.6, 0.005),
-    longitudeDelta: Math.max((maxLng - minLng) * 1.6, 0.005),
-  };
-}
-
-/** Fixture hazards along the demo route, standing in for `/hazards?bbox=…`. */
-export const DEMO_HAZARD_PINS: HazardPin[] = [
-  { id: 'hp1', type: 'pothole', coord: [-76.7942, 18.0113] },
-  { id: 'hp2', type: 'construction', coord: [-76.7905, 18.0092] },
-  { id: 'hp3', type: 'flooding', coord: [-76.7879, 18.0061] },
-  { id: 'hp4', type: 'accident', coord: [-76.7858, 18.009] },
-  { id: 'hp5', type: 'enforcement', coord: [-76.7851, 18.0119] },
-];
-
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  place: {
-    width: 18,
-    height: 18,
-    borderRadius: radius.pill,
-    borderWidth: 3,
-    borderColor: brand.navy,
-  },
   recentre: {
     position: 'absolute',
     right: space.lg,

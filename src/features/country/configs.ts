@@ -100,6 +100,8 @@ export const JM: CountryConfig = {
   },
   payments: ['cash', 'card'],
   locale: 'en-JM',
+  // Kingston.
+  map: { center: [-76.7936, 18.0179], searchRadiusMeters: 50_000 },
 };
 
 /**
@@ -168,6 +170,8 @@ export const TT: CountryConfig = {
   },
   payments: ['cash', 'card', 'mobile_money'],
   locale: 'en-TT',
+  // Port of Spain.
+  map: { center: [-61.519, 10.6549], searchRadiusMeters: 50_000 },
 };
 
 export const COUNTRY_CONFIGS = { JM, TT } as const;

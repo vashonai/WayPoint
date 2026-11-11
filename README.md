@@ -20,7 +20,7 @@ pnpm start          # then press a / i / w
 | Script | What it does |
 | --- | --- |
 | `pnpm start` | Expo dev server |
-| `pnpm test` | Jest + React Native Testing Library (59 tests) |
+| `pnpm test` | Jest + React Native Testing Library (71 tests) |
 | `pnpm typecheck` | `tsc --noEmit`, strict + `noUncheckedIndexedAccess` |
 | `pnpm lint` | ESLint, including the architecture rules below |
 | `pnpm format` | Prettier |
@@ -61,6 +61,7 @@ src/
 │  ├─ hazards/            the ten-condition taxonomy
 │  ├─ fare/               fare PRESENTATION (never calculation)
 │  ├─ tracking/           live position: filter, snap, split route, trace outbox
+│  ├─ maps/               Google Routes + Places (search, route, ETA)
 │  └─ safety/             three-path panic escalation
 ├─ store/                 Zustand — ephemeral state only
 └─ mocks/                 Kingston fixtures standing in for the server
@@ -130,8 +131,8 @@ screen.
 ## Styling: StyleSheet, not NativeWind
 
 Your stack listed "NativeWind / StyleSheet". This uses **StyleSheet driven by
-the token package**, because NativeWind 4.2.6 predates React Native 0.86 and
-Expo SDK 57 and its jsx-runtime patching is not verified against them.
+the token package**, because NativeWind 4.2.6 predates React Native 0.88 and
+Expo SDK 58 and its jsx-runtime patching is not verified against them.
 
 Nothing is lost by adding it later: components consume semantic tokens, not
 literals, so NativeWind can be layered on for static chrome without touching
@@ -143,7 +144,7 @@ classes and native map overlays do not take React Native styles at all.
 
 ## Tests
 
-59 tests, all pure logic and fast. What they protect:
+71 tests, all pure logic and fast. What they protect:
 
 - **Trip machine** — every transition including cancel-during-match, driver
   drops mid-trip, and the server disagreeing with local optimism.
@@ -155,6 +156,8 @@ classes and native map overlays do not take React Native styles at all.
 - **Safety store** — sharing defaults off, expires at trip end, revokes instantly.
 - **Tracking** — bad fixes dropped (accuracy, order, impossible speed), snapping
   within 40 m, route split into taken / remaining, no trace lost in a dead zone.
+- **Maps client** — polyline decoding, lat/lng order at the Google boundary,
+  search restricted to the active market, no request without a key.
 
 The map is deliberately not tested. You do not unit-test a map; the two-sided
 ride flow needs Maestro across two simulators.
@@ -165,11 +168,14 @@ ride flow needs Maestro across two simulators.
 
 Deliberate, in rough priority order.
 
-1. **Only the trip screens have a real map.** `LiveMap` (react-native-maps,
-   Google provider, Google traffic layer) is on both trip screens. Home and
-   quote still use the plain-view `MapCanvas` scaffold. Hazards are fixtures —
-   not yet fetched by viewport (`/hazards?bbox=…`) or pushed over the trip
-   channel — and unclustered; add react-native-map-clustering if pins get dense.
+1. **Routes and place search call Google from the phone.** The server should
+   own the route snapshot a fare is quoted from and a deviation is judged
+   against, so `computeDrivingRoute` moves behind the trip API once it exists
+   (swap its body, not its callers). Until then the Google key is used for web
+   services directly and must be restricted — see `.env.example`. Hazards are
+   fixtures, not yet fetched by viewport (`/hazards?bbox=…`) or pushed over the
+   trip channel, and unclustered; add react-native-map-clustering if pins get
+   dense. The Share My Ride web page (Maps JavaScript API) is not built.
 2. **No backend.** Fixtures stand in for Supabase and tRPC. `firePanic` and the
    report submission have their real three-path / paused-mutation structure with
    placeholder transports.
@@ -182,8 +188,9 @@ Deliberate, in rough priority order.
    `LiveMap` implement the client pipeline: filter, snap to route, split into
    taken / remaining, gliding car, follow / overview camera. The driver's trace
    is recorded by a background task (`index.js` defines it; dev build only)
-   and uploaded in batches. The trip maps are fed by `simulateFixes` because
-   there is no trip room yet; set `source: 'device'` to use the phone's GPS.
+   and uploaded in batches. The car is simulated along Google's real route
+   because there is no trip room yet; set `source: 'device'` to use the
+   phone's GPS.
    The trace queue and the active trip id are in-memory, so a trip that
    outlives an app kill loses its trace until both are MMKV-backed. Uploads
    and the live broadcast are placeholders. The official map-matched trace,
@@ -193,7 +200,7 @@ Deliberate, in rough priority order.
 
 ## Next
 
-- Google Maps keys + an EAS development build; `LiveMap` on home and quote
+- EAS development build; restrict the Google key; move routing behind the trip API
 - Supabase auth and the tRPC decision API
 - MMKV persistence for panic, draft reports, the trip trace, and the query cache
 - Offline outbox: NetInfo → `onlineManager`, `resumePausedMutations`

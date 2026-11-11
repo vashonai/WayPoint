@@ -2,10 +2,17 @@ import { router } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { Button, Card, DEMO_HAZARDS, DEMO_SEGMENTS, MapCanvas, Screen } from '../../src/components';
+import { Button, Card, RoutePreviewMap, Screen } from '../../src/components';
 import { useCountry } from '../../src/features/country/CountryProvider';
 import { presentQuote } from '../../src/features/fare/presentFare';
-import { DEMO_QUOTE, DEMO_TRIP_ID } from '../../src/mocks/fixtures';
+import { useDrivingRoute } from '../../src/features/maps';
+import {
+  DEMO_DESTINATION_PLACE,
+  DEMO_PICKUP_PLACE,
+  DEMO_QUOTE,
+  DEMO_TRIP_ID,
+} from '../../src/mocks/fixtures';
+import { useBookingStore } from '../../src/store/booking.store';
 import { useTripStore } from '../../src/store/trip.store';
 import { brand, space } from '../../src/theme/tokens';
 import { type } from '../../src/theme/typography';
@@ -16,11 +23,17 @@ import { type } from '../../src/theme/typography';
  * A RANGE, never a single number, and always with the plain-language caveat
  * that the final fare can move. The estimate itself is server-quoted; this
  * screen only formats it.
+ *
+ * The route and ETA shown here are Google's, for orientation. They never feed
+ * the fare: the server quotes from its own route snapshot.
  */
 export default function QuoteScreen() {
   const country = useCountry();
   const send = useTripStore((s) => s.send);
   const setActiveTrip = useTripStore((s) => s.setActiveTrip);
+  const pickup = useBookingStore((s) => s.pickup) ?? DEMO_PICKUP_PLACE;
+  const destination = useBookingStore((s) => s.destination) ?? DEMO_DESTINATION_PLACE;
+  const route = useDrivingRoute(pickup.coord, destination.coord);
 
   const confirm = () => {
     send({ type: 'REQUEST_QUOTE' });
@@ -34,7 +47,11 @@ export default function QuoteScreen() {
       <Text style={type.h1}>Confirm your ride</Text>
 
       <View style={styles.mapFrame}>
-        <MapCanvas hazards={DEMO_HAZARDS.slice(0, 4)} segments={DEMO_SEGMENTS} />
+        <RoutePreviewMap
+          route={route.data?.coords ?? null}
+          pickup={pickup.coord}
+          destination={destination.coord}
+        />
       </View>
 
       <Card>
@@ -53,13 +70,22 @@ export default function QuoteScreen() {
         <Text style={type.eyebrow}>Route</Text>
         <View style={styles.leg}>
           <Ionicons name="ellipse" size={11} color={brand.green} />
-          <Text style={type.body}>New Kingston</Text>
+          <Text style={type.body}>{pickup.name}</Text>
         </View>
         <View style={styles.leg}>
           <Ionicons name="location" size={13} color={brand.gold} />
-          <Text style={type.body}>Half Way Tree</Text>
+          <Text style={type.body}>{destination.name}</Text>
         </View>
-        <Text style={type.caption}>7.4 km · about 22 min in current traffic</Text>
+        <Text style={type.caption}>
+          {route.data
+            ? `${(route.data.distanceMeters / 1000).toFixed(1)} km · about ${Math.max(
+                1,
+                Math.round(route.data.durationSeconds / 60),
+              )} min in current traffic`
+            : route.isError
+              ? 'Route estimate unavailable'
+              : 'Finding the best route…'}
+        </Text>
       </Card>
 
       <Button label="Confirm ride" onPress={confirm} />
