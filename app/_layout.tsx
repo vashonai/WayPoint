@@ -1,14 +1,13 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { CountryProvider } from '../src/features/country/CountryProvider';
+import { RootNavigator } from '../src/navigation/RootNavigator';
 import { useSessionStore } from '../src/store/session.store';
 import { useBrandFonts } from '../src/theme/useFonts';
-import { neutral } from '../src/theme/tokens';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -63,47 +62,5 @@ export default function RootLayout() {
         </SafeAreaProvider>
       </CountryProvider>
     </QueryClientProvider>
-  );
-}
-
-/**
- * Role-gated route groups.
- *
- * `mode` is a MODE, not an account type — drivers take rides too, and the
- * Phase 3 dispute view needs both sides of a trip in one record.
- */
-function RootNavigator() {
-  const session = useSessionStore((s) => s.session);
-  const mode = useSessionStore((s) => s.mode);
-  const isDriverVerified = useSessionStore((s) => s.isDriverVerified);
-
-  const signedIn = !!session;
-  const isDriver = mode === 'driver';
-
-  return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: neutral.paper },
-      }}
-    >
-      <Stack.Protected guard={!signedIn}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-
-      <Stack.Protected guard={signedIn && isDriver && !isDriverVerified}>
-        <Stack.Screen name="(onboarding)" />
-      </Stack.Protected>
-
-      <Stack.Protected guard={signedIn && !isDriver}>
-        <Stack.Screen name="(passenger)" />
-      </Stack.Protected>
-
-      <Stack.Protected guard={signedIn && isDriver && isDriverVerified}>
-        <Stack.Screen name="(driver)" />
-      </Stack.Protected>
-
-      <Stack.Screen name="(modals)" options={{ presentation: 'modal' }} />
-    </Stack>
   );
 }
