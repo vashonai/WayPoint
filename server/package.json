@@ -7,10 +7,12 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && tsx scripts/fix-migrations.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/seed/seed.ts",
     "db:maintain": "tsx src/jobs/maintain.ts",
+    "db:check": "tsx scripts/check-connection.ts",
+    "db:smoke": "tsx scripts/smoke.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -19,6 +21,8 @@
     "@aws-sdk/s3-request-presigner": "^3.1178.0",
     "@better-auth/drizzle-adapter": "^1.7.28",
     "@better-auth/expo": "^1.7.28",
+    "@neon/config": "^1.14.8",
+    "@neon/env": "^2.1.11",
     "better-auth": "^1.7.28",
     "dotenv": "^18.0.10",
     "drizzle-orm": "^0.45.4",

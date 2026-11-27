@@ -9,7 +9,8 @@ name: waypoint
 
 services:
   postgres:
-    image: postgis/postgis:17-3.5
+    # Same major as the Neon project (Postgres 18; Neon ships PostGIS 3.6 on 18).
+    image: postgis/postgis:18-3.6
     environment:
       POSTGRES_USER: waypoint
       POSTGRES_PASSWORD: waypoint
@@ -17,7 +18,8 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      # Postgres 18 images keep versioned data under /var/lib/postgresql/<major>.
+      - pgdata:/var/lib/postgresql
       - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U waypoint -d waypoint']
