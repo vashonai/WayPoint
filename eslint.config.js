@@ -8,6 +8,11 @@ module.exports = [
     ignores: ['node_modules/**', '.expo/**', 'dist/**', 'android/**', 'ios/**'],
   },
   {
+    // The backend is Node, not React Native.
+    files: ['server/**/*.ts'],
+    languageOptions: { globals: require('globals').node },
+  },
+  {
     rules: {
       /**
        * Lint as architecture enforcement.
