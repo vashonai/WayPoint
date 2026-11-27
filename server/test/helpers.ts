@@ -1,6 +1,5 @@
-import { sql } from 'drizzle-orm';
-
 import { getDb } from '../src/db/client';
+import { truncateAll } from '../src/db/reset';
 import { countries, drivers, trips, users } from '../src/db/schema';
 import type { LngLat } from '../src/domain/geo';
 import { DEFAULT_HAZARD_RULES } from '../src/domain/hazards';
@@ -8,16 +7,8 @@ import { JM } from '../../src/features/country/configs';
 
 export const db = () => getDb();
 
-/** Empties every table. TRUNCATE skips the append-only row triggers by design. */
-export async function resetData(): Promise<void> {
-  const { rows } = await db().execute<{ tablename: string }>(
-    sql`select tablename from pg_tables
-        where schemaname = 'public' and tablename <> 'spatial_ref_sys'
-          and tablename not like 'trip\\_points\\_%'`,
-  );
-  const list = rows.map((r) => `"${r.tablename}"`).join(', ');
-  await db().execute(sql.raw(`TRUNCATE ${list} RESTART IDENTITY CASCADE`));
-}
+/** Empties every table between tests. */
+export const resetData = () => truncateAll(db());
 
 export async function seedJamaica(): Promise<void> {
   const { code, name, ...config } = JM;
