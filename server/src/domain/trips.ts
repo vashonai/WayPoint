@@ -37,7 +37,10 @@ export const TRIP_TRANSITIONS: Record<TripStatus, readonly TripStatus[]> = {
 export type FareComponent = {
   kind: 'base' | 'distance' | 'time' | 'traffic' | 'wait' | 'adjustment';
   label: string;
-  /** Integer minor units of the trip's currency (JMD has 0 decimals, TTD 2). */
+  /**
+   * Integer ISO 4217 minor units (cents): J$1,180 is 118000. The country
+   * config's `currency.decimals` is display precision only (JMD shows 0).
+   */
   amountMinor: number;
   reason?: string;
   verified?: boolean;

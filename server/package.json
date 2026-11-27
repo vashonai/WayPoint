@@ -10,7 +10,7 @@
     "db:generate": "drizzle-kit generate && tsx scripts/fix-migrations.ts",
     "db:migrate": "tsx src/db/migrate.ts",
     "db:seed": "tsx src/seed/seed.ts",
-    "db:maintain": "tsx src/jobs/maintain.ts",
+    "db:maintain": "tsx scripts/maintain.ts",
     "db:check": "tsx scripts/check-connection.ts",
     "db:smoke": "tsx scripts/smoke.ts",
     "typecheck": "tsc --noEmit",

@@ -26,7 +26,10 @@ import { countries } from './countries';
 import { drivers } from './drivers';
 import { hazards } from './hazards';
 
-/** Money columns are integer minor units of `currency` (PLAN-DATA-LAYER.md, C9). */
+/**
+ * Money columns are integer ISO 4217 minor units (cents) of `currency` — J$1,180
+ * is 118000 — whatever the app's display precision (PLAN-DATA-LAYER.md, C9).
+ */
 export const trips = pgTable(
   'trips',
   {
