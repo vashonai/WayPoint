@@ -2,12 +2,12 @@
 
 The backend's data layer lives in [`server/`](server/), a pnpm workspace package beside the Expo app. The app never talks to the database: every read and write goes through the backend, and authorization lives there (see `getTripForParticipant` in [`server/src/data/trips.ts`](server/src/data/trips.ts)). The design and its trade-offs are in [PLAN-DATA-LAYER.md](PLAN-DATA-LAYER.md).
 
-| Concern | Hosted | Local stand-in |
-| --- | --- | --- |
-| Postgres 18 + PostGIS 3.6 | Neon, project `cool-salad-58620904`, branch `production`, aws-us-east-1 | `postgis/postgis:18-3.6` |
-| Live state (driver positions, online status, trip rooms) | any Valkey/Redis | `valkey/valkey:8-alpine` |
-| Files (evidence, driver documents) | Cloudflare R2 | RustFS (S3 API) |
-| Auth | Better Auth, in the backend | same |
+| Concern                                                  | Hosted                                                                  | Local stand-in           |
+| -------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
+| Postgres 18 + PostGIS 3.6                                | Neon, project `cool-salad-58620904`, branch `production`, aws-us-east-1 | `postgis/postgis:18-3.6` |
+| Live state (driver positions, online status, trip rooms) | any Valkey/Redis                                                        | `valkey/valkey:8-alpine` |
+| Files (evidence, driver documents)                       | Cloudflare R2                                                           | RustFS (S3 API)          |
+| Auth                                                     | Better Auth, in the backend                                             | same                     |
 
 ## Run it locally
 
@@ -42,16 +42,16 @@ Both `.env` and `.env.local` are git-ignored. Never commit either.
 
 Run from the repo root (`pnpm db:…`) or inside `server/` (`pnpm …`).
 
-| Script | What it does | Safe against production? |
-| --- | --- | --- |
-| `db:up` / `db:down` | Start or stop the Docker stack | n/a |
-| `db:migrate` | Applies pending migrations over `DATABASE_URL_UNPOOLED` | Yes, that's its job |
-| `db:check` | Read-only report: host, Postgres and PostGIS versions, table count | Yes |
-| `db:smoke` | End-to-end checks (geography, partitions, dedupe, immutability) in one transaction that is always rolled back | Yes |
-| `db:seed` | Truncates every table and loads demo data. Refuses any non-local database unless `--allow-remote` | **No** |
-| `db:maintain` | Creates the next months' `trip_points` partitions; expires stale hazards and documents | Yes, idempotent |
-| `db:generate` | `drizzle-kit generate`, then unquotes PostGIS types in the new SQL (server only) | n/a |
-| `test:server` | vitest against `TEST_DATABASE_URL` (refuses non-local) | n/a |
+| Script              | What it does                                                                                                  | Safe against production? |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `db:up` / `db:down` | Start or stop the Docker stack                                                                                | n/a                      |
+| `db:migrate`        | Applies pending migrations over `DATABASE_URL_UNPOOLED`                                                       | Yes, that's its job      |
+| `db:check`          | Read-only report: host, Postgres and PostGIS versions, table count                                            | Yes                      |
+| `db:smoke`          | End-to-end checks (geography, partitions, dedupe, immutability) in one transaction that is always rolled back | Yes                      |
+| `db:seed`           | Truncates every table and loads demo data. Refuses any non-local database unless `--allow-remote`             | **No**                   |
+| `db:maintain`       | Creates the next months' `trip_points` partitions; expires stale hazards and documents                        | Yes, idempotent          |
+| `db:generate`       | `drizzle-kit generate`, then unquotes PostGIS types in the new SQL (server only)                              | n/a                      |
+| `test:server`       | vitest against `TEST_DATABASE_URL` (refuses non-local)                                                        | n/a                      |
 
 ## Changing the schema
 
@@ -96,6 +96,7 @@ Run from the repo root (`pnpm db:…`) or inside `server/` (`pnpm …`).
    ```
 
 The app only ever receives short-lived signed URLs:
+
 - Uploads are a presigned `PUT`, and the client must send the signed `Content-Type`.
 - Document downloads are capped at 15 minutes, evidence at an hour.
 
@@ -105,11 +106,11 @@ MinIO no longer publishes community Docker images, which is why RustFS is the lo
 
 ## Valkey
 
-| Key | Holds |
-| --- | --- |
-| `drivers:geo:{country}` | GEO set of online drivers' latest positions |
-| `driver:online:{id}` | Online flag with a 30 s TTL. A dead phone drops out of matching. |
-| `trip:{id}` | Pub/sub channel for the trip room (Socket.IO adapter, next phase) |
+| Key                     | Holds                                                             |
+| ----------------------- | ----------------------------------------------------------------- |
+| `drivers:geo:{country}` | GEO set of online drivers' latest positions                       |
+| `driver:online:{id}`    | Online flag with a 30 s TTL. A dead phone drops out of matching.  |
+| `trip:{id}`             | Pub/sub channel for the trip room (Socket.IO adapter, next phase) |
 
 `db:seed` writes driver positions only to a local Valkey, and never flushes a remote one.
 
