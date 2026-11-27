@@ -176,7 +176,10 @@ Deliberate, in rough priority order.
    fixtures, not yet fetched by viewport (`/hazards?bbox=…`) or pushed over the
    trip channel, and unclustered; add react-native-map-clustering if pins get
    dense. The Share My Ride web page (Maps JavaScript API) is not built.
-2. **No backend.** Fixtures stand in for Supabase and tRPC. `firePanic` and the
+2. **The app isn't wired to the backend yet.** The data layer exists
+   (`server/`: Neon Postgres + PostGIS, Valkey, R2, Better Auth — see
+   [README-DATA.md](README-DATA.md)), but there is no HTTP API or Socket.IO
+   server on top of it, so the app still runs on fixtures. `firePanic` and the
    report submission have their real three-path / paused-mutation structure with
    placeholder transports.
 3. **No persistence.** Zustand stores are in-memory. The panic and draft-report
@@ -201,7 +204,8 @@ Deliberate, in rough priority order.
 ## Next
 
 - EAS development build; restrict the Google key; move routing behind the trip API
-- Supabase auth and the tRPC decision API
+- Backend API over the data layer (Better Auth handler, trip/hazard/trace
+  endpoints, Socket.IO trip rooms), then point the app's placeholders at it
 - MMKV persistence for panic, draft reports, the trip trace, and the query cache
 - Offline outbox: NetInfo → `onlineManager`, `resumePausedMutations`
 - Maestro E2E for the two-sided ride flow

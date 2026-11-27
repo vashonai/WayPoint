@@ -1,6 +1,16 @@
 # Plan: Waypoint data layer
 
-Status: **draft, awaiting approval.** No code has been written.
+Status: **approved and implemented** (branch `feat/data-layer`). How to run it: [README-DATA.md](README-DATA.md).
+
+### How it landed
+
+- Conflicts C1–C13: implemented as recommended.
+- C14: Neon turned out to be on **Postgres 18**, so local runs `postgis/postgis:18-3.6`, which has the same PostGIS 3.6.4 as Neon.
+- MinIO no longer publishes community images, so **RustFS** is the local S3 stand-in.
+- Money is **ISO 4217 minor units (cents)**. The country config's `decimals` is display precision only.
+- `congestion` is in the database with an assumed 60-minute expiry and routing weight 4 (question 3); the app doesn't show it yet.
+- `driver_documents.fields` exists, but nothing stores ID or licence numbers until question 5 is decided.
+- Neon production is migrated. Questions 6, 8 and 9 (job scheduling, API framework, API style) are still open.
 
 ## 1. What exists today
 
