@@ -1,0 +1,64 @@
+# Local stand-ins for the hosted stack:
+#   postgres → Neon (same major version, PostGIS)
+#   valkey   → hosted Valkey/Redis
+#   storage  → Cloudflare R2 (S3 API, RustFS)
+#
+# Data lives in Docker-named volumes, not bind mounts: this repo sits in a
+# OneDrive folder, and syncing a live database directory corrupts it.
+name: waypoint
+
+services:
+  postgres:
+    # Same major as the Neon project (Postgres 18; Neon ships PostGIS 3.6 on 18).
+    image: postgis/postgis:18-3.6
+    environment:
+      POSTGRES_USER: waypoint
+      POSTGRES_PASSWORD: waypoint
+      POSTGRES_DB: waypoint
+    ports:
+      - '5432:5432'
+    volumes:
+      # Postgres 18 images keep versioned data under /var/lib/postgresql/<major>.
+      - pgdata:/var/lib/postgresql
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U waypoint -d waypoint']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ['CMD', 'valkey-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # S3-compatible object storage. MinIO stopped publishing community images,
+  # so RustFS (Apache-2.0, S3 API) stands in. Buckets are created by
+  # `pnpm db:seed` / the test setup through the same S3 SDK the app uses.
+  storage:
+    image: rustfs/rustfs:1.0.7
+    environment:
+      RUSTFS_ACCESS_KEY: waypoint
+      RUSTFS_SECRET_KEY: waypoint-dev-secret
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    volumes:
+      - storagedata:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:9000/health || exit 1']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  pgdata:
+  valkeydata:
+  storagedata:
